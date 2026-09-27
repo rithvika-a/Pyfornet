@@ -1,0 +1,35 @@
+{
+  "rules": [
+    {
+      "id": "port_scan",
+      "description": "Same source IP contacting many distinct destination ports/services in a short window",
+      "threshold": 20,
+      "window_seconds": 10,
+      "cooldown": 10
+    },
+    {
+      "id": "brute_force",
+      "description": "Same source IP contacting the same destination port/service in a short window",
+      "threshold": 15,
+      "window_seconds": 30,
+      "cooldown": 10
+    },
+    {
+      "id": "flood_detection",
+      "description": "Same source IP sending an unusually high packet count in a short window",
+      "threshold": 50,
+      "window_seconds": 5,
+      "cooldown": 10
+    },
+    {
+      "id": "blacklist_ip",
+      "description": "Traffic to or from a known-bad IP",
+      "blocklist_file": "blacklist.txt"
+    },
+    {
+      "id": "suspicious_dns",
+      "description": "DNS query to a domain on a watchlist",
+      "watchlist_file": "watchlist.txt"
+    }
+  ]
+}
