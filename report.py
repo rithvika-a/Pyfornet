@@ -31,8 +31,6 @@ def generate_table(anomaly_entries):
 
 def write_report(session_path, manifest_entry, data, custody_logs):
     session_path = Path(session_path)
-    #data = read_logs(session_path)
-    #custody_logs = custody_reader(session_path)
     report_path = session_path / "report.txt"
 
     lines = []
@@ -43,7 +41,7 @@ def write_report(session_path, manifest_entry, data, custody_logs):
     w("-----NETWORK CAPTURE FORENSIC REPORT-----\n")
 
     w("----EVIDENCE DESCRIPTION----")
-    w(f"Session ID: {session_path}")
+    w(f"Session ID: {Path(session_path).name}")
     w(f"Report generated: {datetime.now(timezone.utc).isoformat()}\n")
 
     w("---SESSION OVERVIEW---")
@@ -68,6 +66,8 @@ def write_report(session_path, manifest_entry, data, custody_logs):
         w(f"Number of port scan attempts: {len(data['port_scan'])}")
         w("Each flagged entry is as follows:")
         w(generate_table(data["port_scan"]))
+        w()
+
         port_scan_rule = rules("port_scan")
         for entry in data["port_scan"]:
             w(
@@ -78,13 +78,16 @@ def write_report(session_path, manifest_entry, data, custody_logs):
             )
 
     else:
-        w("No port scan attempts observed.\n")
+        w("No port scan attempts observed.")
+    w()
 
     w("---BRUTE FORCE ATTEMPTS---")
     if data["brute_force"]:
         w(f"Number of brute force attempts: {len(data['brute_force'])}")
         w("Each flagged entry is as follows:")
         w(generate_table(data["brute_force"]))
+        w()
+
         brute_force_rule = rules("brute_force")
         for entry in data["brute_force"]:
             w(
@@ -95,13 +98,16 @@ def write_report(session_path, manifest_entry, data, custody_logs):
             )
 
     else:
-        w("No brute force attempts observed.\n")
+        w("No brute force attempts observed.")
+    w()
 
     w("---PACKET FLOODING---")
     if data["flood_detection"]:
         w(f"Number of flooding attempts: {len(data['flood_detection'])}")
         w("Each flagged entry is as follows:")
         w(generate_table(data["flood_detection"]))
+        w()
+
         flood_detection_rule = rules("flood_detection")
         for entry in data["flood_detection"]:
             w(
@@ -112,13 +118,16 @@ def write_report(session_path, manifest_entry, data, custody_logs):
             )
 
     else:
-        w("No flooding attempts observed.\n")
+        w("No flooding attempts observed.")
+    w()
 
     w("---SUSPICIOUS IP---")
     if data["ip_blocklist"]:
         w(f"Number of suspicious IPs encountered: {len(data['ip_blocklist'])}")
         w("Each flagged entry is as follows:")
         w(generate_table(data["ip_blocklist"]))
+        w()
+
         for entry in data["ip_blocklist"]:
             if entry["direction"] == "inbound":
                 observed_ip = entry["dst"]
@@ -131,13 +140,16 @@ def write_report(session_path, manifest_entry, data, custody_logs):
             )
 
     else:
-        w("No suspicious IPs observed.\n")
+        w("No suspicious IPs observed.")
+    w()
 
     w("---SUSPICIOUS DNS REQUESTS---")
     if data["suspicious_dns"]:
         w(f"Number of suspicious DNS queries encountered: {len(data['suspicious_dns'])}")
         w("Each flagged entry is as follows:")
         w(generate_table(data["suspicious_dns"]))
+        w()
+
         for entry in data["suspicious_dns"]:
             if entry["direction"] == "inbound":
                 observed_ip = entry["dst"]
@@ -150,14 +162,15 @@ def write_report(session_path, manifest_entry, data, custody_logs):
             )
 
     else:
-        w("No suspicious DNS queries observed.\n")
+        w("No suspicious DNS queries observed.")
+    w()
 
     w("---CHAIN OF CUSTODY SUMMARY---")
     if custody_logs:
         for entry in custody_logs:
             w(entry)
     else:
-        w("")
+        w()
 
     w("---LOG INTEGRITY---")
     w(f"Number of invalid JSON log lines encountered: {data['invalid_json']}")
@@ -172,8 +185,9 @@ def write_report(session_path, manifest_entry, data, custody_logs):
 
     else:
         w("No anomalies were observed during this session. Routine review is still suggested.")
+    w()
 
-    w("\n-----END OF REPORT-----")
+    w("-----END OF REPORT-----")
 
     report_text = "\n".join(lines)
 

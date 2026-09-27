@@ -34,8 +34,7 @@ def read_logs(session_path):
         "suspicious_dns": [],
         "flagged_anomalies": set(),
         "invalid_json": 0,
-        "total_lines": 0,
-    }
+        }
 
     every_rule = [
         rules("port_scan"),
@@ -73,7 +72,7 @@ def read_logs(session_path):
                     "dst": entry["dst"],
                     "dport": entry["dport"],
                     "dns_query": entry["dns_query"],
-                }
+                    }
 
                 anomalies_here = []
 

@@ -1,5 +1,6 @@
 import time
 import json
+from pathlib import Path
 
 
 def rules(chosen_rule, filename="ruleset.json"):
@@ -9,6 +10,7 @@ def rules(chosen_rule, filename="ruleset.json"):
             for rule in config["rules"]:
                 if rule["id"] == chosen_rule:
                     return rule
+                
     except FileNotFoundError:
         print(f"Ruleset file does not exist: {filename}")
     except OSError as e:
@@ -22,12 +24,15 @@ def rules(chosen_rule, filename="ruleset.json"):
 
 def ip_blocklist(src_ip, dst_ip):
     rule = rules("ip_blocklist")
+    
     if rule is None:
         print("ip_blocklist rule not found in ruleset.json. Skipping check.")
         return
 
+    blocklist_file = Path(rule["blocklist_file"])
+
     try:
-        with open(rule["blocklist_file"], "r", encoding="utf-8") as f:
+        with open(blocklist_file, "r", encoding="utf-8") as f:
             for line_number, line in enumerate(f, start=1):
                 if src_ip == line.strip():
                     print("ALERT: IP matched from blacklist")
@@ -47,12 +52,15 @@ def ip_blocklist(src_ip, dst_ip):
 
 def suspicious_dns(dns_query):
     rule = rules("suspicious_dns")
+
     if rule is None:
         print("suspicious_dns rule not found in ruleset.json. Skipping check.")
         return
 
+    watchlist_file = Path(rule["watchlist_file"])
+
     try:
-        with open(rule["watchlist_file"], "r", encoding="utf-8") as f:
+        with open(watchlist_file, "r", encoding="utf-8") as f:
             for line_number, line in enumerate(f, start=1):
                 if dns_query == line.strip():
                     print("ALERT: DNS matched from watchlist file")

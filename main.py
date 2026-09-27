@@ -39,7 +39,7 @@ def run_capture(args):
                 print(
                     f"Interface '{args.interface}' not found. "
                     f"Available interfaces: {get_if_list()}"
-                )
+                    )
         else:
             print("Hostname not provided.")
 
@@ -59,18 +59,24 @@ def run_capture(args):
                 session_path,
                 timestamp=manifest_entry["capture_start"],
                 interface=interface,
-                hostname=args.hostname,
-            )
+                )
             
-            manifest_path = update_manifest(session_path, manifest_entry, pcap_path, log_path)
+            latest_entry, manifest_path = update_manifest(
+                session_path, manifest_entry, 
+                pcap_path, log_path
+                )
 
             custody_logger(
                 "capture_ended",
                 session_path,
                 timestamp=manifest_entry["capture_end"],
-                files_produced=[Path(pcap_path).name, Path(log_path).name, manifest_path],
-                hash_computed=[manifest_entry["evidence_hash"], manifest_entry["log_hash"]],
-            )
+                files_produced=[
+                    Path(pcap_path).name, 
+                    Path(log_path).name, 
+                    Path(manifest_path).name
+                    ],
+                hash_computed=[latest_entry["evidence_hash"], latest_entry["log_hash"]],
+                )
 
             sudo_uid = os.environ.get('SUDO_UID')
             sudo_gid = os.environ.get('SUDO_GID')
@@ -81,7 +87,7 @@ def run_capture(args):
             print(
                 f"Run 'python3 main.py report -f {session_path}' "
                 "to generate a summary of this session."
-            )
+                )
 
 
 def run_report(args):
@@ -100,23 +106,24 @@ def run_report(args):
             "integrity_failed",
             session_dir,
             timestamp=datetime.now(timezone.utc).isoformat(),
-        )
+            )
         return
 
     custody_logger(
         "integrity_verified",
         session_dir,
         timestamp=datetime.now(timezone.utc).isoformat(),
-    )
+        )
 
     results = read_logs(session_dir)
-    custody_logs = custody_reader(session_dir)
 
     custody_logger(
         "evidence_logs_read",
         session_dir,
         timestamp=datetime.now(timezone.utc).isoformat(),
-    )
+        )
+
+    custody_logs = custody_reader(session_dir)
     
     report_text, report_path = write_report(session_dir, manifest_entry, results, custody_logs)
 
@@ -125,7 +132,7 @@ def run_report(args):
         session_dir,
         timestamp=datetime.now(timezone.utc).isoformat(),
         file_produced=Path(report_path).name,
-    )
+        )
 
     if args.print_console:
         print(report_text)
@@ -134,7 +141,7 @@ def run_report(args):
             "report_printed",
             session_dir,
             timestamp=datetime.now(timezone.utc).isoformat(),
-        )
+            )
     else:
         print(f"Report generated and saved in {report_path}.")
 

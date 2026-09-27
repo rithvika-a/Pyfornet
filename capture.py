@@ -1,5 +1,4 @@
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -94,7 +93,7 @@ class PacketHandler:
                     "packet_length": len(packet),
                     "payload_size": payload_size,
                     "anomaly": list(anomaly),
-                }
+                    }
 
                 with open(self.log_path, "a", encoding="utf-8") as f:
                     json.dump(log_entry, f, separators=(",", ":"))
@@ -145,7 +144,7 @@ def capture_packet(machine_ip, interface, hostname):
                 prn=handler.handle_packet, 
                 promisc=False, 
                 store=True
-            )
+                )
             
         else:
             sniffed_pkts = sniff(
@@ -153,7 +152,10 @@ def capture_packet(machine_ip, interface, hostname):
                 iface=interface, 
                 promisc=False, 
                 store=True
-            )
+                )
+
+        capture_end = datetime.now(timezone.utc)
+        capture_window = str(capture_end - capture_start)
 
     except KeyboardInterrupt:
         print("Capture ended.")
@@ -173,7 +175,7 @@ def capture_packet(machine_ip, interface, hostname):
                 "interface": interface,
                 "hostname": hostname,
                 "total_packets": len(sniffed_pkts),
-            }
+                }
 
             return True, manifest_entry
         

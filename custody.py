@@ -9,7 +9,7 @@ def custody_logger(func, session_path, **details):
         "description": func.replace("_", " "),
         "session_id": Path(session_path).name,
         **details
-                }
+        }
 
     try:
         with open(custody_path, "a", encoding="utf-8") as file:

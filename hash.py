@@ -36,7 +36,7 @@ def update_manifest(session_path, entry, pcap_path, log_path):
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-    return manifest_path
+    return entry, manifest_path
 
 
 def verify_file_integrity(session_path):

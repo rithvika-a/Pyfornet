@@ -22,14 +22,14 @@
       "cooldown": 10
     },
     {
-      "id": "blacklist_ip",
+      "id": "ip_blocklist",
       "description": "Traffic to or from a known-bad IP",
-      "blocklist_file": "blacklist.txt"
+      "blocklist_file": "data/blacklist.txt"
     },
     {
       "id": "suspicious_dns",
       "description": "DNS query to a domain on a watchlist",
-      "watchlist_file": "watchlist.txt"
+      "watchlist_file": "data/watchlist.txt"
     }
   ]
 }
