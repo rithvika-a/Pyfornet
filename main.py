@@ -6,44 +6,34 @@ from pathlib import Path
 
 from scapy.all import get_if_list
 
-from capture import capture_packet, session_path
-from hash import verify_file_integrity
+from capture import capture_packet, permissions, session_path, pcap_path, log_path
+from hash import update_manifest, verify_file_integrity
+from read import read_logs
 from report import write_report
-from custody import custody_logger
+from custody import custody_logger, custody_reader
 
 captures_path = Path("Captures")
 
 if not os.path.exists(captures_path):
     os.mkdir(captures_path)
 
+    sudo_uid = os.environ.get('SUDO_UID')
+    sudo_gid = os.environ.get('SUDO_GID')
+    
+    permissions("session_dir", captures_path, sudo_uid, sudo_gid)
+
 
 def run_capture(args):
+    interface = ""
+
     try:
         ipaddress.ip_address(args.ip)
         if not (args.hostname).isspace():
             if args.interface in get_if_list():
-                print(f"Starting capture on interface: {args.interface}")
-                print(f"Machine IP: {args.ip}")
-                print(f"Hostname: {args.hostname}")
-
-                if capture_packet(args.ip, args.interface, args.hostname):
-                    print(f"Session saved to: {session_path}")
-                    print(
-                        f"Run 'python3 main.py report -f {session_path}' "
-                        "to generate a summary of this session."
-                    )
+                interface = args.interface
 
             elif not args.interface:
-                print("Starting capture on interface: default")
-                print(f"Machine IP: {args.ip}")
-                print(f"Hostname: {args.hostname}")
-
-                if capture_packet(args.ip, "default", args.hostname):
-                    print(f"Session saved to: {session_path}")
-                    print(
-                        f"Run 'python3 main.py report -f {session_path}' "
-                        "to generate a summary of this session."
-                    )
+                interface = "default"
 
             else:
                 print(
@@ -55,6 +45,43 @@ def run_capture(args):
 
     except ValueError:
         print("Invalid IP address provided.")
+
+    if interface:
+        print(f"Starting capture on interface: {interface}")
+        print(f"Machine IP: {args.ip}")
+        print(f"Hostname: {args.hostname}")
+
+        status, manifest_entry = capture_packet(args.ip, interface, args.hostname)
+
+        if status:
+            custody_logger(
+                "capture_started",
+                session_path,
+                timestamp=manifest_entry["capture_start"],
+                interface=interface,
+                hostname=args.hostname,
+            )
+            
+            manifest_path = update_manifest(session_path, manifest_entry, pcap_path, log_path)
+
+            custody_logger(
+                "capture_ended",
+                session_path,
+                timestamp=manifest_entry["capture_end"],
+                files_produced=[Path(pcap_path).name, Path(log_path).name, manifest_path],
+                hash_computed=[manifest_entry["evidence_hash"], manifest_entry["log_hash"]],
+            )
+
+            sudo_uid = os.environ.get('SUDO_UID')
+            sudo_gid = os.environ.get('SUDO_GID')
+
+            permissions("output_files", session_path, sudo_uid, sudo_gid)
+
+            print(f"Session saved to: {session_path}")
+            print(
+                f"Run 'python3 main.py report -f {session_path}' "
+                "to generate a summary of this session."
+            )
 
 
 def run_report(args):
@@ -82,13 +109,22 @@ def run_report(args):
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
-    report_text, report_path = write_report(session_dir, manifest_entry)
+    results = read_logs(session_dir)
+    custody_logs = custody_reader(session_dir)
+
+    custody_logger(
+        "evidence_logs_read",
+        session_dir,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+    
+    report_text, report_path = write_report(session_dir, manifest_entry, results, custody_logs)
 
     custody_logger(
         "report_generated",
         session_dir,
         timestamp=datetime.now(timezone.utc).isoformat(),
-        file_produced=str(report_path),
+        file_produced=Path(report_path).name,
     )
 
     if args.print_console:
@@ -104,12 +140,13 @@ def run_report(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="pyfornet: Network Anomaly Detection and Reporting Tool")
+    description = "Pyfornet: Network-Based Intrusion Detection System (single-host)"
+    parser = argparse.ArgumentParser(description=description)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     capture_parser = subparsers.add_parser(
         "capture", 
-        help="Start a live network capture and detection session. (sudo permissions required)"
+        help="Start a live network capture and detection session. (sudo required)"
         )
     capture_parser.add_argument(
         "-i", "--interface", required=False, 

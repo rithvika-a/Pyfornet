@@ -7,8 +7,7 @@ from pathlib import Path
 from scapy.all import sniff, IP, TCP, UDP, ICMP, wrpcap, Raw, DNS, DNSQR
 
 from detect import port_scan, brute_force, flood_detection, ip_blocklist, suspicious_dns
-from hash import update_manifest
-from custody import custody_logger
+
 
 session_format = datetime.now().strftime("%Y-%m-%d_%H-%M")
 session_path = Path(f"Captures/session_{session_format}")
@@ -105,25 +104,25 @@ class PacketHandler:
             print(f"Error handling packet: {e}")
 
 
-def secure_session_files(session_path, sudo_uid=None, sudo_gid=None):
+def permissions(func, session_path, sudo_uid=None, sudo_gid=None):
     session_path = Path(session_path)
 
     if sudo_uid and sudo_gid:
-        try:
-            os.chown(session_path, int(sudo_uid), int(sudo_gid))
-        except OSError as e:
-            print(f"Could not change ownership of {session_path}: {e}")
-
-        try:
-            os.chown(session_path.parent, int(sudo_uid), int(sudo_gid))
-        except OSError as e:
-            print(f"Could not change ownership of {session_path.parent}: {e}")
-
-        for file in session_path.iterdir():
+        if func == "session_dir":
             try:
-                os.chown(file, int(sudo_uid), int(sudo_gid))
+                os.chown(session_path, int(sudo_uid), int(sudo_gid))
+
             except OSError as e:
-                print(f"Could not change ownership of {file}: {e}")
+                print(f"Could not change ownership of {session_path}: {e}")
+
+        if func == "output_files":
+            for file in session_path.iterdir():
+                try:
+                    os.chown(file, int(sudo_uid), int(sudo_gid))
+
+                except OSError as e:
+                    print(f"Could not change ownership of {file}: {e}")
+
                 
 def capture_packet(machine_ip, interface, hostname):
     print("Starting capture... press Ctrl+C to stop")
@@ -134,28 +133,27 @@ def capture_packet(machine_ip, interface, hostname):
         if not os.path.exists(session_path):
             os.mkdir(session_path)
 
+            sudo_uid = os.environ.get('SUDO_UID')
+            sudo_gid = os.environ.get('SUDO_GID')
+
+            permissions("session_dir", session_path, sudo_uid, sudo_gid)
+
         capture_start = datetime.now(timezone.utc)
 
-        custody_logger(
-            "capture_started",
-            session_path,
-            timestamp=capture_start.isoformat(),
-            interface=interface,
-            hostname=hostname,
-        )
-
         if interface == "default":
-            sniffed_pkts = sniff(prn=handler.handle_packet, promisc=False, store=True)
+            sniffed_pkts = sniff(
+                prn=handler.handle_packet, 
+                promisc=False, 
+                store=True
+            )
+            
         else:
             sniffed_pkts = sniff(
                 prn=handler.handle_packet, 
                 iface=interface, 
                 promisc=False, 
                 store=True
-                                )
-
-        capture_end = datetime.now(timezone.utc)
-        capture_window = str(capture_end - capture_start)
+            )
 
     except KeyboardInterrupt:
         print("Capture ended.")
@@ -177,22 +175,12 @@ def capture_packet(machine_ip, interface, hostname):
                 "total_packets": len(sniffed_pkts),
             }
 
-            update_manifest(session_path, manifest_entry, pcap_path, log_path)
-
-            custody_logger(
-                "capture_ended",
-                session_path,
-                timestamp=capture_end.isoformat(),
-                files_produced=[Path(pcap_path).name, Path(log_path).name, "manifest.json"],
-                hash_computed=[manifest_entry["evidence_hash"], manifest_entry["log_hash"]],
-            )
-
-            sudo_uid = os.environ.get('SUDO_UID')
-            sudo_gid = os.environ.get('SUDO_GID')
-
-            secure_session_files(session_path, sudo_uid, sudo_gid)
-            return True
-
+            return True, manifest_entry
+        
         else:
             print("No packets captured. Halting evidence and log creation.")
-            return False
+
+            if os.path.exists(session_path): 
+                os.rmdir(session_path)
+
+            return False, None

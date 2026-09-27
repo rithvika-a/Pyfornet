@@ -8,6 +8,7 @@ def compute_file_hash(filepath):
     filepath = Path(filepath)
     if not filepath.exists():
         return "No hash generated: file is not found"
+    
     if not filepath.is_file():
         return "No hash generated: path is not a file"
 
@@ -26,6 +27,7 @@ def update_manifest(session_path, entry, pcap_path, log_path):
     if manifest_path.exists():
         with open(manifest_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
     else:
         data = {"entries": []}
 
@@ -34,18 +36,17 @@ def update_manifest(session_path, entry, pcap_path, log_path):
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
+    return manifest_path
+
 
 def verify_file_integrity(session_path):
     session_path = Path(session_path)
     manifest_path = session_path / "manifest.json"
 
-    #if not manifest_path.exists():
-        #print(f"No manifest file found in {session_path}")
-        #return False, None
-
     try:
         with open(manifest_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
     except json.JSONDecodeError as e:
         print(f"Could not read manifest file: {e}")
         return False, None

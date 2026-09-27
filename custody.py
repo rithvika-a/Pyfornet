@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from datetime import datetime, timezone
 
 
 def custody_logger(func, session_path, **details):
@@ -8,7 +7,7 @@ def custody_logger(func, session_path, **details):
 
     log_entry = {
         "description": func.replace("_", " "),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "session_id": Path(session_path).name,
         **details
                 }
 
@@ -17,8 +16,8 @@ def custody_logger(func, session_path, **details):
             json.dump(log_entry, file, separators=(",", ":"))
             file.write("\n")
 
-    except OSError as error:
-        print(f"Could not write to chain of custody log: {error}")
+    except OSError as e:
+        print(f"Could not write to chain of custody log: {e}")
 
 
 def custody_reader(session_path):

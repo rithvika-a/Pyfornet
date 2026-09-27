@@ -36,6 +36,7 @@ def ip_blocklist(src_ip, dst_ip):
                 elif dst_ip == line.strip():
                     print("ALERT: IP matched from blacklist")
                     return rule["id"]
+                
     except FileNotFoundError:
         print(f"Blocklist file does not exist: {rule['blocklist_file']}")
     except OSError as e:
@@ -56,6 +57,7 @@ def suspicious_dns(dns_query):
                 if dns_query == line.strip():
                     print("ALERT: DNS matched from watchlist file")
                     return rule["id"]
+                
     except FileNotFoundError:
         print(f"Watchlist file does not exist: {rule['watchlist_file']}")
     except OSError as e:

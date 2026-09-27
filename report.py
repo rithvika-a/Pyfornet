@@ -3,8 +3,6 @@ from pathlib import Path
 from tabulate import tabulate
 from datetime import datetime, timezone
 
-from custody import custody_reader
-
 
 def rules(chosen_rule, filename="ruleset.json"):
     try:
@@ -13,6 +11,7 @@ def rules(chosen_rule, filename="ruleset.json"):
             for rule in config["rules"]:
                 if rule["id"] == chosen_rule:
                     return rule
+                
     except FileNotFoundError:
         print(f"Ruleset file does not exist: {filename}")
     except OSError as e:
@@ -23,96 +22,17 @@ def rules(chosen_rule, filename="ruleset.json"):
     return None
 
 
-def read_logs(session_path):
-    log_path = Path(session_path) / "logs.jsonl"
-
-    results = {
-        "src_ips": set(),
-        "dst_ips": set(),
-        "dports": set(),
-        "port_scan": [],
-        "brute_force": [],
-        "flood_detection": [],
-        "ip_blocklist": [],
-        "suspicious_dns": [],
-        "flagged_anomalies": set(),
-        "invalid_json": 0,
-        "total_lines": 0,
-    }
-
-    every_rule = [
-        rules("port_scan"),
-        rules("brute_force"),
-        rules("flood_detection"),
-        rules("ip_blocklist"),
-        rules("suspicious_dns")
-        ]
-    
-    try:
-        with open(log_path, "r", encoding="utf-8") as f:
-            for line_number, line in enumerate(f, start=1):
-                line = line.strip()
-                if not line:
-                    continue
-
-                results["total_lines"] += 1
-
-                try:
-                    entry = json.loads(line)
-                except json.JSONDecodeError:
-                    results["invalid_json"] += 1
-                    continue
-
-                if not isinstance(entry, dict):
-                    results["invalid_json"] += 1
-                    continue
-
-                table_entry = {
-                    "timestamp": entry["timestamp"],
-                    "interface": entry["interface"],
-                    "direction": entry["direction"],
-                    "src": entry["src"],
-                    "sport": entry["sport"],
-                    "dst": entry["dst"],
-                    "dport": entry["dport"],
-                    "dns_query": entry["dns_query"],
-                }
-
-                anomalies_here = []
-
-                if entry["anomaly"]:
-                    anomalies_here = entry["anomaly"]
-
-                for rule in every_rule: 
-                    if rule["id"] in anomalies_here:
-                        results[rule["id"]].append(table_entry)
-                        results["flagged_anomalies"].add(rule["id"])
-
-                if entry["src"]:
-                    results["src_ips"].add(entry["src"])
-                if entry["dst"]:
-                    results["dst_ips"].add(entry["dst"])
-                if entry["dport"]:
-                    results["dports"].add(entry["dport"])
-
-    except FileNotFoundError:
-        print(f"Log file does not exist: {log_path}")
-    except OSError as e:
-        print(f"Could not read log file: {e}")
-
-    return results
-
-
 def generate_table(anomaly_entries):
     if not anomaly_entries:
         return ""
+    
     return tabulate(anomaly_entries, headers="keys", tablefmt="rst")
 
 
-def write_report(session_path, manifest_entry):
+def write_report(session_path, manifest_entry, data, custody_logs):
     session_path = Path(session_path)
-    data = read_logs(session_path)
-    custody_logs = custody_reader(session_path)
+    #data = read_logs(session_path)
+    #custody_logs = custody_reader(session_path)
     report_path = session_path / "report.txt"
 
     lines = []
@@ -123,7 +43,7 @@ def write_report(session_path, manifest_entry):
     w("-----NETWORK CAPTURE FORENSIC REPORT-----\n")
 
     w("----EVIDENCE DESCRIPTION----")
-    w(f"Session: {session_path}")
+    w(f"Session ID: {session_path}")
     w(f"Report generated: {datetime.now(timezone.utc).isoformat()}\n")
 
     w("---SESSION OVERVIEW---")
@@ -156,6 +76,7 @@ def write_report(session_path, manifest_entry):
                 f"{port_scan_rule['window_seconds']} seconds, "
                 "consistent with port scanning activity."
             )
+
     else:
         w("No port scan attempts observed.\n")
 
@@ -172,6 +93,7 @@ def write_report(session_path, manifest_entry):
                 f"{brute_force_rule['window_seconds']} seconds, "
                 "consistent with brute force activity."
             )
+
     else:
         w("No brute force attempts observed.\n")
 
@@ -188,6 +110,7 @@ def write_report(session_path, manifest_entry):
                 f"{flood_detection_rule['window_seconds']} seconds, "
                 "consistent with packet flooding activity."
             )
+
     else:
         w("No flooding attempts observed.\n")
 
@@ -206,6 +129,7 @@ def write_report(session_path, manifest_entry):
                 f"At {entry['timestamp']}, {entry['direction']} traffic involving "
                 f"known suspicious IP {observed_ip} was observed."
             )
+
     else:
         w("No suspicious IPs observed.\n")
 
@@ -224,12 +148,16 @@ def write_report(session_path, manifest_entry):
                 f"At {entry['timestamp']}, {entry['direction']} traffic from {observed_ip} "
                 f"revealed a known suspicious DNS query: {entry['dns_query']}."
             )
+
     else:
         w("No suspicious DNS queries observed.\n")
 
-    w("\n---CHAIN OF CUSTODY SUMMARY---\n")
-    for entry in custody_logs:
-        w(entry)
+    w("---CHAIN OF CUSTODY SUMMARY---")
+    if custody_logs:
+        for entry in custody_logs:
+            w(entry)
+    else:
+        w("")
 
     w("---LOG INTEGRITY---")
     w(f"Number of invalid JSON log lines encountered: {data['invalid_json']}")
@@ -241,6 +169,7 @@ def write_report(session_path, manifest_entry):
         "Due to the anomaly(s) observed within this session, "
         "further investigation is highly suggested."
         )
+
     else:
         w("No anomalies were observed during this session. Routine review is still suggested.")
 
@@ -251,6 +180,7 @@ def write_report(session_path, manifest_entry):
     try:
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(report_text)
+
     except PermissionError as e:
         print(f"Could not access report file: {e}")
         return
