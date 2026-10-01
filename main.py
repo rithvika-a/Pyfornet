@@ -147,7 +147,7 @@ def run_report(args):
 
 
 def main():
-    description = "Pyfornet: Network-Based Intrusion Detection System (single-host)"
+    description = "Pyfornet: Network-Based Intrusion Detection System (Single-Host)"
     parser = argparse.ArgumentParser(description=description)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
