@@ -18,7 +18,6 @@ def rules(chosen_rule, filename="ruleset.json"):
     except PermissionError as e:
         print(f"Could not access ruleset file: {e}")
 
-    # no matching rule found, or file couldn't be read — caller must check for None
     return None
 
 
@@ -74,7 +73,6 @@ def suspicious_dns(dns_query):
         print(f"Could not access watchlist file: {e}")
 
 
-# These variables persist across packets instead of resetting every call
 port_scan_tracker = {}
 port_scan_alerted = {}
 brute_force_tracker = {}
@@ -90,7 +88,7 @@ def port_scan(src_ip, dport):
         return
 
     if dport is None:
-        return  # skip non-TCP/UDP packets, nothing to track
+        return
 
     if src_ip in port_scan_alerted:
         if time.time() - port_scan_alerted[src_ip] > rule["cooldown"]:
@@ -98,13 +96,11 @@ def port_scan(src_ip, dport):
         else:
             return
 
-    # if this src ip hasn't been seen yet, start tracking it
     if src_ip not in port_scan_tracker:
         port_scan_tracker[src_ip] = {"ports": set(), "first_seen": time.time()}
 
     entry = port_scan_tracker[src_ip]
 
-    # if the time window has expired, reset tracking for this ip
     if time.time() - entry["first_seen"] > rule["window_seconds"]:
         entry["ports"] = set()
         entry["first_seen"] = time.time()
@@ -114,7 +110,6 @@ def port_scan(src_ip, dport):
     if len(entry["ports"]) >= rule["threshold"]:
         print("ALERT: Port Scan Attempt Detected")
         port_scan_alerted[src_ip] = time.time()
-        # reset after alerting so it doesn't fire on every single packet afterward
         entry["ports"] = set()
         entry["first_seen"] = time.time()
         return rule["id"]
@@ -127,7 +122,7 @@ def brute_force(src_ip, dport):
         return
 
     if dport is None:
-        return  # skip non-TCP/UDP packets, nothing to track
+        return
 
     if src_ip in brute_force_alerted:
         if time.time() - brute_force_alerted[src_ip] > rule["cooldown"]:
@@ -140,7 +135,6 @@ def brute_force(src_ip, dport):
 
     entry = brute_force_tracker[src_ip]
 
-    # if the time window has expired, reset tracking for this ip
     if time.time() - entry["first_seen"] > rule["window_seconds"]:
         entry["ports"] = []
         entry["first_seen"] = time.time()
@@ -149,7 +143,6 @@ def brute_force(src_ip, dport):
 
     if len(set(entry["ports"])) == 1 and len(entry["ports"]) >= rule["threshold"]:
         print("ALERT: Brute Force Attempt Detected")
-        # reset after alerting so it doesn't fire on every single packet afterward
         brute_force_alerted[src_ip] = time.time()
         entry["ports"] = []
         entry["first_seen"] = time.time()
@@ -173,7 +166,6 @@ def flood_detection(src_ip):
 
     entry = flood_detection_tracker[src_ip]
 
-    # if the time window has expired, reset tracking for this ip
     if time.time() - entry["first_seen"] > rule["window_seconds"]:
         entry["packets"] = 0
         entry["first_seen"] = time.time()
@@ -183,7 +175,6 @@ def flood_detection(src_ip):
     if entry["packets"] >= rule["threshold"]:
         print("ALERT: Flood of Packets Detected")
         flood_detection_alerted[src_ip] = time.time()
-        # reset after alerting so it doesn't fire on every single packet afterward
         entry["packets"] = 0
         entry["first_seen"] = time.time()
         return rule["id"]
