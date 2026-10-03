@@ -169,8 +169,7 @@ def write_report(session_path, manifest_entry, data, custody_logs):
     if custody_logs:
         for entry in custody_logs:
             w(entry)
-    else:
-        w()
+    w()
 
     w("---LOG INTEGRITY---")
     w(f"Number of invalid JSON log lines encountered: {data['invalid_json']}")
