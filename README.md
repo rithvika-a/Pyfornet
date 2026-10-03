@@ -35,7 +35,7 @@ This tool combines three areas:
 ## Installation
 
 ```bash
-git clone [your-repo-url]
+git clone https://github.com/rithvika-a/Pyfornet.git
 cd pyfornet
 pip install -r requirements.txt
 ```
@@ -83,7 +83,7 @@ pyfornet/
 
 ## Detection Rule Design & Sources
 
-Detection thresholds were chosen with reference to publicly documented industry practice rather than arbitrary guesses. These are intended as tunable starting points rather than fixed values:
+Detection thresholds were chosen with reference to publicly documented industry practice rather than arbitrary guesses. These are intended as tunable starting points:
 
 - **Flood/volume and brute-force thresholds** were sourced from Snort's own documented `rate_filter` and `detection_filter` examples. See: [Snort README.filters](https://www.snort.org/faq/readme-filters)
 - **Port scan detection** does not use a single fixed "industry standard" threshold, because none is publicly published. Snort's own scan-detection preprocessor uses internally tuned sensitivity tiers rather than a documented number. Therefore, a deliberate design choice was made to baseline rate-based thresholds against my own environment. This tool's port scan threshold is treated as a tunable starting default, following that documented best practice.
@@ -109,9 +109,9 @@ This tool is intended for use only on networks and systems you own or have expli
 
 - **Privilege scope:** packet capture (`capture`) requires `sudo`/root, since raw socket access is required. `report` does not need elevated privileges, since the session directory's ownership is corrected to the invoking user immediately upon creation, not just at the end of capture. This closes the original permission error seen when generating reports without `sudo`.
 - **Output file ownership:** evidence and log files are created while the process is running as root, so their ownership is only corrected to the invoking user as the final step of a successful capture. If a capture were to fail between the session directory being created and that final step completing, the individual files (`logs.jsonl`, `evidence.pcap`, `manifest.json`, `custody_logs.jsonl`) could remain root-owned. This limits the user-scope of report generation, thereby making `sudo` a requirement for that `report` command to work.
-- **Detection runs in real-time/streaming mode** (state is tracked per source IP while capturing), rather than the batch-based model this project started from. This became a deliberate choice once the batch-mode logic was proven to work, to better reflect my goal of live network capture through this tool.
+- **Detection runs in real-time mode** (state is tracked per source IP while capturing), instead of the batch-based model this project started from. This became a deliberate choice once the batch-mode logic was proven to work, to better reflect my goal of live network capture through this tool, and to imitate real-world NIDS.
 - **Thresholds are static defaults**, sourced from Snort's documented examples and general practitioner guidance. NIST's own guidance suggests that these should be baselined against actual network behaviour before being treated as authoritative for any real deployment.
-- **The blacklist and watchlist do not update automatically.** Rather than an up-to-date, continuously refreshed set, a static 30-day snapshot was used. In a real-world deployment, these sets would need to be refreshed more frequently.
+- **The blacklist and watchlist do not update automatically.** Instead of an up-to-date, continuously refreshed set, a static 30-day snapshot was used. In a real-world deployment, these sets would need to be refreshed more frequently.
 - **Detection state is per-process, in-memory** (e.g. `port_scan_tracker`, `flood_detection_tracker` in `detect.py`); it resets if the tool restarts and does not persist activity across multiple capture sessions.
 - **Single-host only.** No multi-host or distributed traffic correlation; each session's detection state is isolated to one capture run on one machine.
 - **Data file paths are relative to the current working directory**, not anchored to the script's own location. The tool must currently be run from the project root for `ruleset.json`'s file references to resolve correctly.
