@@ -41,8 +41,8 @@ def custody_reader(session_path):
                     continue
 
     except FileNotFoundError:
-        print(f"Log file does not exist: {custody_path}")
+        print(f"Chain of custody log does not exist: {custody_path}")
     except OSError as e:
-        print(f"Could not read log file: {e}")
+        print(f"Could not read chain of custody log: {e}")
 
     return custody_logs
