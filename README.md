@@ -7,19 +7,19 @@ A Python-based tool that captures live network traffic and detects suspicious ac
 > Pyfornet operates at a single-host scope, not enterprise-level deployment, but implements the same core network-based IDS techniques such as packet-level traffic analysis, rule-based anomaly detection, and alerting.
 
 This tool combines three areas:
-- **Networking** — live packet capture and analysis using `scapy`
-- **Digital forensics** — evidence integrity (SHA-256 hashing, manifest files, chain-of-custody logging) and structured investigation-style reporting
-- **Secure Python development** — input validation, safe file handling and error handling, and config-driven (not hardcoded) detection rules
+- **Networking** - live packet capture and analysis using `scapy`
+- **Digital forensics** - evidence integrity (SHA-256 hashing, manifest files, chain-of-custody logging) and structured investigation-style reporting
+- **Secure Python development** - input validation, safe file handling and error handling, and config-driven (not hardcoded) detection rules
 
 ## Features
 
 - Live packet capture on a user-specified network interface (all interfaces if none provided)
 - Real-time anomaly detection while capturing, including:
-  - **Port scan detection** — flags a source IP contacting many number of distinct destination ports within a short window
-  - **Brute-force detection** — flags a source IP repeatedly targeting the same port (e.g. repeated login attempts) within a window
-  - **Flood/volume detection** — flags a source IP sending an unusually high volume of packets within a short window
-  - **IP blocklist matching** — flags traffic to or from known-malicious IPs
-  - **Suspicious DNS matching** — flags DNS queries to known-malicious domains
+  - **Port scan detection** - flags a source IP contacting many number of distinct destination ports within a short window
+  - **Brute-force detection** - flags a source IP repeatedly targeting the same port (e.g. repeated login attempts) within a window
+  - **Flood/volume detection** - flags a source IP sending an unusually high volume of packets within a short window
+  - **IP blocklist matching** - flags traffic to or from known-malicious IPs
+  - **Suspicious DNS matching** - flags DNS queries to known-malicious domains
 - Alert cooldown per source IP, preventing a single ongoing event from flooding the output with repeated alerts
 - Evidence integrity: every capture session's `.pcap` and `.jsonl` files are hashed (SHA-256) and recorded in a manifest
 - Append-only chain-of-custody logging of actions taken on each capture session
@@ -29,7 +29,7 @@ This tool combines three areas:
 ## Requirements
 
 - Python 3.9+
-- Kali Linux or another Linux distribution (root/sudo privileges required for packet capture)
+- Kali Linux (root/sudo privileges required for packet capture)
 - See `requirements.txt` for Python package dependencies
 
 ## Installation
